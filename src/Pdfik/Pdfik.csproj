@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- netstandard2.0 reaches .NET Framework 4.6.2+ / .NET Core 2.0+ / Mono;
+         net8.0 is the current LTS with the inbox System.Text.Json. -->
+    <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
+    <LangVersion>10.0</LangVersion>
+    <RootNamespace>Pdfik</RootNamespace>
+    <AssemblyName>Pdfik</AssemblyName>
+    <PackageId>Pdfik</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>PDFik</Authors>
+    <Company>PDFik.net</Company>
+    <Description>Official C# SDK for the PDFik API: URL/HTML/Markdown to PDF, PNG/JPEG screenshots and Factur-X / ZUGFeRD e-invoices, with signed webhooks, test mode, BYOB delivery and synchronous (wait: true) one-call rendering.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://pdfik.net</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/pdfik/pdfik-csharp</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>pdf;html-to-pdf;url-to-pdf;markdown-to-pdf;screenshot;factur-x;zugferd;e-invoice;pdfik</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591: missing XML doc comments on self-explanatory members;
+         CS1573: params like cancellationToken undocumented on documented methods. -->
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Pinned explicitly for BOTH targets: netstandard2.0 has no inbox
+         System.Text.Json, and the explicit reference keeps net8.0 on a
+         patched version as well. -->
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pdfik.Tests" />
+  </ItemGroup>
+
+</Project>
