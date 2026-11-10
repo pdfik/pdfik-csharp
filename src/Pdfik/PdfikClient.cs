@@ -166,12 +166,15 @@ namespace Pdfik
                     }
                     catch (HttpRequestException e)
                     {
+                        // No HTTP answer, a body that broke off while SendAsync buffered
+                        // it, or our own per-request timeout: 503 NETWORK_ERROR, as in
+                        // the other PDFik SDKs, with the transport failure as InnerException.
                         if (resend && attempt < 3)
                         {
                             await DelayFunc(BackoffDelay(attempt), ct).ConfigureAwait(false);
                             continue;
                         }
-                        throw new PdfikException("Connection failed: " + e.Message, 503, null, null);
+                        throw new PdfikException("Connection failed: " + e.Message, 503, "NETWORK_ERROR", null, e);
                     }
                 }
                 if (throttled < throttleWaits && IsThrottled(response, throttles))
@@ -355,8 +358,8 @@ namespace Pdfik
                 {
                     Content = new StringContent(json, Encoding.UTF8, "application/json"),
                 };
-                request.Headers.Add("X-API-Key", _apiKey);
-                request.Headers.Add("Idempotency-Key", key);
+                AddHeader(request, "X-API-Key", _apiKey);
+                AddHeader(request, "Idempotency-Key", key);
                 return request;
             };
         }
@@ -366,9 +369,27 @@ namespace Pdfik
             return () =>
             {
                 var request = new HttpRequestMessage(HttpMethod.Get, _baseUrl + path);
-                request.Headers.Add("X-API-Key", _apiKey);
+                AddHeader(request, "X-API-Key", _apiKey);
                 return request;
             };
+        }
+
+        // Headers.Add refuses a CR/LF itself, but HttpClient refuses a non-ASCII value only
+        // while it writes the request, as an HttpRequestException that would read as a
+        // NETWORK_ERROR and be resent. No API key or Idempotency-Key the API accepts has
+        // one, so it is refused here, before anything is sent, as the CR/LF is.
+        private static void AddHeader(HttpRequestMessage request, string name, string value)
+        {
+            foreach (char c in value)
+            {
+                if (c > '\u007f')
+                {
+                    throw new FormatException(name + " contains the non-ASCII character U+"
+                        + ((int)c).ToString("X4", CultureInfo.InvariantCulture)
+                        + ", which an HTTP header cannot carry (often an invisible character pasted along with the value).");
+                }
+            }
+            request.Headers.Add(name, value);
         }
 
         private async Task<JobCreatedResponse> PostJobAsync(string path, object body, string idempotencyKey, CancellationToken ct)
@@ -883,6 +904,10 @@ namespace Pdfik
         /// Verifies the authenticity of an incoming PDFik webhook by validating the
         /// HMAC-SHA256 signature in the <c>X-PDFik-Signature</c> header (format
         /// <c>t=...,v1=...</c>, HMAC over "timestamp.rawBody", ±300 s window).
+        /// While a rotated-out secret is still inside its overlap window the header
+        /// carries one <c>v1</c> per secret, the current secret's first
+        /// (<c>t=...,v1=...,v1=...</c>): every <c>v1</c> is checked, and the delivery
+        /// is genuine if ANY of them matches <paramref name="webhookSecret"/>.
         /// Always verify BEFORE processing the event payload, and pass the RAW body
         /// string, never re-serialized JSON.
         /// </summary>
@@ -910,7 +935,7 @@ namespace Pdfik
             try
             {
                 string timestamp = null;
-                string receivedSig = null;
+                var receivedSigs = new List<string>();
                 foreach (var part in signatureHeader.Split(','))
                 {
                     var idx = part.IndexOf('=');
@@ -918,9 +943,9 @@ namespace Pdfik
                     var key = part.Substring(0, idx).Trim();
                     var val = part.Substring(idx + 1).Trim();
                     if (key == "t") timestamp = val;
-                    else if (key == "v1") receivedSig = val;
+                    else if (key == "v1") receivedSigs.Add(val);
                 }
-                if (timestamp == null || receivedSig == null) return false;
+                if (timestamp == null || receivedSigs.Count == 0) return false;
 
                 long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                 long ts = long.Parse(timestamp);
@@ -934,10 +959,15 @@ namespace Pdfik
                 }
                 var hex = new StringBuilder(rawHmac.Length * 2);
                 foreach (var b in rawHmac) hex.Append(b.ToString("x2"));
+                var expected = Encoding.UTF8.GetBytes(hex.ToString());
 
-                return FixedTimeEquals(
-                    Encoding.UTF8.GetBytes(hex.ToString()),
-                    Encoding.UTF8.GetBytes(receivedSig));
+                // Every candidate is compared, each in constant time.
+                var matched = false;
+                foreach (var receivedSig in receivedSigs)
+                {
+                    if (FixedTimeEquals(expected, Encoding.UTF8.GetBytes(receivedSig))) matched = true;
+                }
+                return matched;
             }
             catch
             {

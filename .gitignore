@@ -7,3 +7,6 @@ obj/
 *.user
 .vs/
 TestResults/
+# Keep the solution even where a parent .gitignore drops *.sln (the monorepo's does):
+# dotnet test, the NuGet publish and the mirror sync all read it.
+!Pdfik.sln

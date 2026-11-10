@@ -142,6 +142,7 @@ namespace Pdfik.Tests
             var e = await Assert.ThrowsAsync<PdfikException>(() => client.HtmlToPdfFileAsync("<p>x</p>"));
 
             Assert.Equal(503, e.StatusCode);
+            Assert.Equal("NETWORK_ERROR", e.ErrorCode);
             Assert.Contains("Connection failed", e.Message);
             Assert.Single(handler.Requests);
         }
@@ -219,6 +220,7 @@ namespace Pdfik.Tests
             var e = await Assert.ThrowsAsync<PdfikException>(() => client.UrlToPdfFileAsync("https://example.com"));
 
             Assert.Equal(503, e.StatusCode);
+            Assert.Equal("NETWORK_ERROR", e.ErrorCode);
             Assert.Contains("Connection failed", e.Message);
             Assert.Single(handler.Requests);
         }

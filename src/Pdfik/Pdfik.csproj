@@ -8,7 +8,7 @@
     <RootNamespace>Pdfik</RootNamespace>
     <AssemblyName>Pdfik</AssemblyName>
     <PackageId>Pdfik</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>PDFik</Authors>
     <Company>PDFik.net</Company>
     <Description>Official C# SDK for the PDFik API: URL/HTML/Markdown to PDF, PNG/JPEG screenshots and Factur-X / ZUGFeRD e-invoices, with signed webhooks, test mode, BYOB delivery and synchronous (wait: true) one-call rendering.</Description>

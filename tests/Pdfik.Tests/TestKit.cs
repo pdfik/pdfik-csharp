@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -67,6 +68,22 @@ namespace Pdfik.Tests
             return this;
         }
 
+        /// <summary>A <paramref name="status"/> answer whose body breaks off after its first bytes, like a dropped connection.</summary>
+        public MockHttpHandler BrokenBody(int status, string contentType)
+        {
+            _script.Add(() =>
+            {
+                var response = new HttpResponseMessage((System.Net.HttpStatusCode)status)
+                {
+                    Content = new StreamContent(new BreaksOffStream()),
+                };
+                response.Content.Headers.TryAddWithoutValidation("Content-Type", contentType);
+                return response;
+            });
+            _throwMessages.Add(null);
+            return this;
+        }
+
         private static HttpResponseMessage Build(int status, byte[] body, string contentType)
         {
             var response = new HttpResponseMessage((System.Net.HttpStatusCode)status)
@@ -103,6 +120,39 @@ namespace Pdfik.Tests
                 throw new HttpRequestException(_throwMessages[index]);
             return _script[index]();
         }
+    }
+
+    /// <summary>A read-only body that yields a few bytes, then fails the way a dropped connection does.</summary>
+    internal sealed class BreaksOffStream : Stream
+    {
+        private bool _sentFirstChunk;
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            if (_sentFirstChunk)
+                throw new IOException("The response ended prematurely.");
+            _sentFirstChunk = true;
+            var chunk = Encoding.ASCII.GetBytes("%PDF-1.7 part");
+            int length = Math.Min(count, chunk.Length);
+            Array.Copy(chunk, 0, buffer, offset, length);
+            return length;
+        }
+
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     internal static class TestKit

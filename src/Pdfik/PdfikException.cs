@@ -15,7 +15,7 @@ namespace Pdfik
         /// <summary>HTTP status code of the failed call (503 for connection failures, 408 for a polling timeout).</summary>
         public int StatusCode { get; }
 
-        /// <summary>Machine-readable error code (e.g. <c>SSRF_BLOCKED</c>, <c>SYNC_TIMEOUT</c>, <c>TIMEOUT</c>), when the API named one.</summary>
+        /// <summary>Machine-readable error code (e.g. <c>SSRF_BLOCKED</c>, <c>SYNC_TIMEOUT</c>, <c>TIMEOUT</c>), when the API named one; <c>NETWORK_ERROR</c> for a connection failure.</summary>
         public string ErrorCode { get; }
 
         /// <summary>The raw response body, when there was one.</summary>
@@ -23,6 +23,15 @@ namespace Pdfik
 
         public PdfikException(string message, int statusCode, string errorCode, string responseBody)
             : base(message)
+        {
+            StatusCode = statusCode;
+            ErrorCode = errorCode;
+            ResponseBody = responseBody;
+        }
+
+        // The client's own NETWORK_ERROR keeps the transport failure as InnerException.
+        internal PdfikException(string message, int statusCode, string errorCode, string responseBody, Exception innerException)
+            : base(message, innerException)
         {
             StatusCode = statusCode;
             ErrorCode = errorCode;
