@@ -69,6 +69,15 @@ namespace Pdfik.Tests
         }
 
         [Fact]
+        public void EmptySecret_ReturnsFalse()
+        {
+            // Accepted a forged request before 2026-11-10: HMAC with an empty key is public.
+            var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            const string body = "{\"job_id\":\"j\"}";
+            Assert.False(PdfikClient.VerifyWebhookSignature(body, Headers(ts, Sign(body, "", ts)), ""));
+        }
+
+        [Fact]
         public void WrongSecret_ReturnsFalse()
         {
             long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();

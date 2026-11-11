@@ -70,7 +70,7 @@ namespace Pdfik.Tests
         }
 
         [Fact]
-        public async Task BodyThatBreaksOff_IsANetworkError_RetriedLikeA5xx()
+        public async Task DownloadBodyThatBreaksOff_IsANetworkError_NotResent()
         {
             // The status line arrived, then the connection dropped mid-body: HttpClient
             // buffers the body inside SendAsync, so this is the same transport failure.
@@ -81,8 +81,9 @@ namespace Pdfik.Tests
 
             Assert.Equal(503, e.StatusCode);
             Assert.Equal("NETWORK_ERROR", e.ErrorCode);
-            Assert.Equal(3, handler.Requests.Count);
-            Assert.Equal(new[] { TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2) }, delays);
+            // Not resent: every started stream is one of the file's three download attempts.
+            Assert.Single(handler.Requests);
+            Assert.Empty(delays);
             // The transport failure stays reachable: HttpClient wraps the body's IOException.
             var transport = Assert.IsType<HttpRequestException>(e.InnerException);
             Assert.Equal("The response ended prematurely.", Assert.IsType<IOException>(transport.InnerException).Message);

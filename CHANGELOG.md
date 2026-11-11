@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.1 (2026-11-10)
+
+- Fixed: `VerifyWebhookSignature` returns `false` for an empty secret (it accepted a forged
+  request: an HMAC with an empty key is public).
+- Fixed: `DownloadAsync` / `DownloadPdf` are not resent after a broken connection: each
+  started stream is one of the file's three download attempts.
+- Fixed: the `429` volume quota held by jobs that are still running is waited out like the
+  request-rate throttle; a used-up volume quota is still thrown at once.
+
 ## 0.2.0 (2026-11-09)
 
 - Fixed: `PdfikClient.VerifyWebhookSignature` checks every `v1` in

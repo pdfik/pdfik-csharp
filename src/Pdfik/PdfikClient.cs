@@ -208,7 +208,9 @@ namespace Pdfik
             {
                 if (IsCase(node, slug)) return true;
             }
-            return false;
+            // The volume quota HELD by jobs still running clears by itself and says when;
+            // a used-up volume quota carries no retry_after_seconds.
+            return IsCase(node, "quota-bytes-exceeded") && node["retry_after_seconds"] != null;
         }
 
         /// <summary>The documented case <paramref name="slug"/>: the fragment of the body's <c>type</c> URL, or its <c>error</c> code.</summary>
@@ -769,8 +771,9 @@ namespace Pdfik
         /// </summary>
         public async Task<byte[]> DownloadAsync(string jobId, CancellationToken cancellationToken = default)
         {
+            // Not resent: every started stream is one of the file's three download attempts.
             var response = await ExecuteAsync(GetFactory("/jobs/" + jobId + "/download"),
-                _requestTimeout, resend: true, ThrottleWaits, DownloadThrottles, cancellationToken).ConfigureAwait(false);
+                _requestTimeout, resend: false, ThrottleWaits, DownloadThrottles, cancellationToken).ConfigureAwait(false);
             CheckResponse(response);
             return response.Body;
         }
@@ -916,7 +919,7 @@ namespace Pdfik
         /// <param name="webhookSecret">The secret from your PDFik dashboard (<c>whsec_...</c>).</param>
         public static bool VerifyWebhookSignature(string rawBody, IDictionary<string, string> headers, string webhookSecret)
         {
-            if (rawBody == null || headers == null || webhookSecret == null) return false;
+            if (rawBody == null || headers == null || string.IsNullOrEmpty(webhookSecret)) return false;
 
             string signatureHeader = null;
             string timestampHeader = null;
