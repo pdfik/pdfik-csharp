@@ -1,6 +1,6 @@
 # Pdfik
 
-> **Where this code lives:** extracted from the PDFik platform monorepo (last sync 2026-11-11).
+> **Where this code lives:** extracted from the PDFik platform monorepo (last sync 2026-11-19).
 > Releases to NuGet are cut from the monorepo; issues and PRs are welcome here.
 
 Official C# SDK for [PDFik](https://pdfik.net) — the URL/HTML-to-PDF API.
@@ -103,6 +103,17 @@ Get the direct API download URL for the generated PDF (requires the `X-API-Key` 
 ```csharp
 JobFileResponse fileInfo = client.GetFileUrl(job.JobId);
 Console.WriteLine($"Direct Download URL: {fileInfo.DownloadUrl}");
+```
+
+### Check your key and usage
+
+`GetAccountAsync()` (or the blocking `GetAccount()`) returns the plan, the current quota window, what has been used in it and the limits — without creating a job or charging anything:
+
+```csharp
+var account = await client.GetAccountAsync();
+Console.WriteLine(account.Plan);                                            // e.g. "free"
+Console.WriteLine($"{account.Usage.Documents} of {account.Limits.Documents}"); // used / allowed this window
+Console.WriteLine(account.Window.End);                                      // when the window resets
 ```
 
 ### Test mode

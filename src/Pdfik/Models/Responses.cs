@@ -61,4 +61,74 @@ namespace Pdfik.Models
         /// <summary>-1: the link does not expire by itself — the file's own 24 h retention applies.</summary>
         public int ExpiresInSeconds { get; set; }
     }
+
+    /// <summary>
+    /// GET /account answer: the key's account — plan, current quota window, usage in it
+    /// and limits.
+    /// </summary>
+    public class AccountResponse
+    {
+        /// <summary>free, starter, pro or business.</summary>
+        public string Plan { get; set; }
+
+        /// <summary>
+        /// The quota window limits are counted in: the UTC calendar month on the Free plan;
+        /// on paid plans monthly from the subscription's billing day.
+        /// </summary>
+        public AccountWindow Window { get; set; }
+
+        public AccountUsage Usage { get; set; }
+
+        public AccountLimits Limits { get; set; }
+
+        public AccountTestMode TestMode { get; set; }
+
+        public AccountKey Key { get; set; }
+    }
+
+    public class AccountWindow
+    {
+        /// <summary>Start of the window (inclusive, UTC).</summary>
+        public DateTimeOffset Start { get; set; }
+
+        /// <summary>End of the window (exclusive, UTC): when it resets.</summary>
+        public DateTimeOffset End { get; set; }
+    }
+
+    public class AccountUsage
+    {
+        /// <summary>Documents charged in this window (new jobs are refused at the limit); null if unknown right now.</summary>
+        public long? Documents { get; set; }
+
+        /// <summary>Bytes of generated output finished in this window.</summary>
+        public long Bytes { get; set; }
+    }
+
+    public class AccountLimits
+    {
+        /// <summary>Documents per window; null means unlimited.</summary>
+        public long? Documents { get; set; }
+
+        /// <summary>Bytes of generated output per window; null means unlimited.</summary>
+        public long? Bytes { get; set; }
+
+        public int RequestsPerMinute { get; set; }
+
+        public int ConcurrentJobs { get; set; }
+
+        public long MaxFileSizeBytes { get; set; }
+    }
+
+    public class AccountTestMode
+    {
+        public int PerMinute { get; set; }
+
+        public int PerDay { get; set; }
+    }
+
+    public class AccountKey
+    {
+        /// <summary>The key's name in the dashboard; null if it has none.</summary>
+        public string Name { get; set; }
+    }
 }

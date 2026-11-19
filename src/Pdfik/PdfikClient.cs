@@ -20,6 +20,11 @@ namespace Pdfik
     /// </summary>
     public class PdfikClient : IDisposable
     {
+        // Internal: this SDK's version (a test compares the header with Pdfik.csproj) and the
+        // X-PDFik-Client value of every request it sends.
+        internal const string Version = "0.3.0";
+        internal const string ClientHeader = "sdk-csharp/" + Version;
+
         // A throttle (rate or in-flight limit) is waited out, not counted as a failed
         // attempt — but not forever: after this many waits the 429 is raised.
         internal const int ThrottleWaits = 5;
@@ -361,6 +366,7 @@ namespace Pdfik
                     Content = new StringContent(json, Encoding.UTF8, "application/json"),
                 };
                 AddHeader(request, "X-API-Key", _apiKey);
+                AddHeader(request, "X-PDFik-Client", ClientHeader);
                 AddHeader(request, "Idempotency-Key", key);
                 return request;
             };
@@ -372,6 +378,7 @@ namespace Pdfik
             {
                 var request = new HttpRequestMessage(HttpMethod.Get, _baseUrl + path);
                 AddHeader(request, "X-API-Key", _apiKey);
+                AddHeader(request, "X-PDFik-Client", ClientHeader);
                 return request;
             };
         }
@@ -689,6 +696,21 @@ namespace Pdfik
         // ------------------------------------------------------------------
         // Job polling and download
         // ------------------------------------------------------------------
+
+        /// <summary>
+        /// The key's account: plan, current quota window, usage in it and limits. Creates
+        /// no job and charges nothing — useful to check that a key works.
+        /// </summary>
+        public async Task<AccountResponse> GetAccountAsync(CancellationToken cancellationToken = default)
+        {
+            var response = await ExecuteAsync(GetFactory("/account"),
+                _requestTimeout, resend: true, ThrottleWaits, Throttles, cancellationToken).ConfigureAwait(false);
+            CheckResponse(response);
+            return Deserialize<AccountResponse>(response);
+        }
+
+        /// <inheritdoc cref="GetAccountAsync"/>
+        public AccountResponse GetAccount() => Sync(GetAccountAsync());
 
         public Task<JobStatusResponse> GetJobAsync(string jobId, CancellationToken cancellationToken = default)
         {

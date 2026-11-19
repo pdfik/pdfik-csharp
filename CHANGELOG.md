@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 (2026-11-19)
+
+- Added: `GetAccountAsync()` / `GetAccount()` — `GET /account`: the key's plan, current
+  quota window, usage in it and limits (`AccountResponse`). Creates no job and charges
+  nothing; useful to check a key.
+- Added: every request sends `X-PDFik-Client: sdk-csharp/<version>` so usage can be
+  attributed to this SDK.
+
 ## 0.2.1 (2026-11-10)
 
 - Fixed: `VerifyWebhookSignature` returns `false` for an empty secret (it accepted a forged
